@@ -30,13 +30,14 @@ export async function readJsonFile<T>(filePath: string): Promise<T | undefined> 
 }
 
 export async function writeJsonAtomically(filePath: string, value: unknown): Promise<void> {
-  await mkdir(dirname(filePath), { recursive: true });
+  await mkdir(dirname(filePath), { recursive: true, mode: 0o700 });
   const temporaryPath = join(dirname(filePath), `.${basename(filePath)}.${randomUUID()}.tmp`);
 
   try {
     await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, {
       encoding: 'utf8',
       flag: 'wx',
+      mode: 0o600,
     });
     await rename(temporaryPath, filePath);
   } catch (error) {

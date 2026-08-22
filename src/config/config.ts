@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
 
 export interface AppConfig {
@@ -12,6 +13,7 @@ export interface LoadConfigOptions {
   args?: readonly string[];
   cwd?: string;
   env?: NodeJS.ProcessEnv;
+  homeDirectory?: string;
 }
 
 export class ConfigurationError extends Error {
@@ -23,31 +25,39 @@ export class ConfigurationError extends Error {
 
 type ConfigValues = Partial<AppConfig>;
 
-export const DEFAULT_CONFIG: Readonly<AppConfig> = {
-  port: 3000,
-  dataDirectory: 'data',
-  allowedHosts: ['127.0.0.1', 'localhost'],
-};
+export const DEFAULT_CONFIG: Readonly<AppConfig> = createDefaultConfig(homedir());
 
 const CONFIG_KEYS = new Set(['port', 'dataDirectory', 'allowedHosts']);
+const USER_CONFIG_PATH = ['.coordination-mcp', 'config.yml'] as const;
 
 export async function loadConfig(options: LoadConfigOptions = {}): Promise<AppConfig> {
   const cwd = options.cwd ?? process.cwd();
+  const homeDirectory = options.homeDirectory ?? homedir();
   const args = options.args ?? process.argv.slice(2);
   const env = options.env ?? process.env;
   const profilePath = parseProfilePath(args);
+  const defaults = createDefaultConfig(homeDirectory);
 
-  let values = cloneConfig(DEFAULT_CONFIG);
+  let values = cloneConfig(defaults);
   values = mergeConfig(values, await readConfigFile(resolve(cwd, 'config/default.yml'), false));
+  values = mergeConfig(values, await readConfigFile(join(homeDirectory, ...USER_CONFIG_PATH), false));
   if (profilePath !== undefined) {
     values = mergeConfig(values, await readConfigFile(resolve(cwd, profilePath), true));
   }
   values = mergeConfig(values, readEnvironmentConfig(env));
 
   return {
-    port: values.port ?? DEFAULT_CONFIG.port,
-    dataDirectory: resolve(cwd, values.dataDirectory ?? DEFAULT_CONFIG.dataDirectory),
-    allowedHosts: [...(values.allowedHosts ?? DEFAULT_CONFIG.allowedHosts)],
+    port: values.port ?? defaults.port,
+    dataDirectory: resolve(cwd, values.dataDirectory ?? defaults.dataDirectory),
+    allowedHosts: [...(values.allowedHosts ?? defaults.allowedHosts)],
+  };
+}
+
+function createDefaultConfig(homeDirectory: string): AppConfig {
+  return {
+    port: 3000,
+    dataDirectory: resolve(homeDirectory, '.coordination-mcp', 'data'),
+    allowedHosts: ['127.0.0.1', 'localhost'],
   };
 }
 

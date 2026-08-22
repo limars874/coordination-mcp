@@ -88,8 +88,11 @@ export class FileStateStore implements StateStore {
 
   async appendUpdate(update: Update): Promise<void> {
     const filePath = updatesFile(this.dataDirectory, update.scope);
-    await mkdir(scopeDirectory(this.dataDirectory, update.scope), { recursive: true });
-    await appendFile(filePath, `${JSON.stringify(update)}\n`, 'utf8');
+    await mkdir(scopeDirectory(this.dataDirectory, update.scope), { recursive: true, mode: 0o700 });
+    await appendFile(filePath, `${JSON.stringify(update)}\n`, {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
   }
 
   async listUpdates(scope: string, options: ListUpdatesOptions): Promise<ListUpdatesResult> {

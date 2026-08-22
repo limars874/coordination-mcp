@@ -1,17 +1,20 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CoordinationService } from '../src/application/coordination-service.js';
 import { FileArtifactStore } from '../src/persistence/file-artifact-store.js';
 import { FileStateStore } from '../src/persistence/file-state-store.js';
+import { ticketsDirectory, updatesFile } from '../src/persistence/paths.js';
 
 describe('CoordinationService tickets', () => {
+  let temporaryDirectory: string;
   let dataDirectory: string;
   let service: CoordinationService;
 
   beforeEach(async () => {
-    dataDirectory = await mkdtemp(join(tmpdir(), 'coordination-mcp-'));
+    temporaryDirectory = await mkdtemp(join(tmpdir(), 'coordination-mcp-'));
+    dataDirectory = join(temporaryDirectory, 'data');
     service = new CoordinationService({
       stateStore: new FileStateStore(dataDirectory),
       artifactStore: new FileArtifactStore(dataDirectory),
@@ -19,7 +22,7 @@ describe('CoordinationService tickets', () => {
   });
 
   afterEach(async () => {
-    await rm(dataDirectory, { recursive: true, force: true });
+    await rm(temporaryDirectory, { recursive: true, force: true });
   });
 
   it('creates a ticket with server-assigned identity and retrieves it', async () => {
@@ -174,6 +177,29 @@ describe('CoordinationService tickets', () => {
       latestSeq: 1,
       hasMore: false,
     });
+  });
+
+  it('creates private data directories and files lazily on the first write', async () => {
+    await expect(stat(dataDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+
+    const ticket = await service.createTicket({
+      scope: 'coordination-mcp',
+      title: 'Private durable state',
+      created_by: 'user',
+    });
+    const update = await service.addUpdate({
+      scope: 'coordination-mcp',
+      type: 'note',
+      body: 'The data directory was created lazily.',
+      created_by: 'local-ai',
+    });
+
+    expect((await stat(dataDirectory)).mode & 0o777).toBe(0o700);
+    expect((await stat(ticketsDirectory(dataDirectory, ticket.scope))).mode & 0o777).toBe(0o700);
+    expect(
+      (await stat(join(ticketsDirectory(dataDirectory, ticket.scope), `${ticket.id}.json`))).mode & 0o777,
+    ).toBe(0o600);
+    expect((await stat(updatesFile(dataDirectory, update.scope))).mode & 0o777).toBe(0o600);
   });
 
   it('rejects binary artifacts, missing Tickets, and immutable Ticket fields', async () => {
