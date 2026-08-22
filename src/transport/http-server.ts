@@ -1,16 +1,15 @@
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { toNodeHandler } from '@modelcontextprotocol/node';
+import { DEFAULT_CONFIG } from '../config/config.js';
 import type { CoordinationService } from '../application/coordination-service.js';
 import { createMcpRequestHandler } from './mcp-server.js';
-
-const DEFAULT_ALLOWED_HOSTS = ['127.0.0.1', 'localhost'];
 
 export function createCoordinationHttpServer(
   service: CoordinationService,
   options: { allowedHosts?: string[] } = {},
 ): Server {
   const handler = toNodeHandler(createMcpRequestHandler(service));
-  const allowedHosts = options.allowedHosts ?? readAllowedHosts();
+  const allowedHosts = options.allowedHosts ?? DEFAULT_CONFIG.allowedHosts;
 
   return createServer((request, response) => {
     if (request.url?.split('?', 1)[0] !== '/mcp') {
@@ -36,17 +35,6 @@ export function createCoordinationHttpServer(
   });
 }
 
-function readAllowedHosts(): string[] {
-  const configured = process.env.COORDINATION_ALLOWED_HOSTS;
-  if (configured === undefined) {
-    return DEFAULT_ALLOWED_HOSTS;
-  }
-  return configured
-    .split(',')
-    .map(host => host.trim())
-    .filter(host => host.length > 0);
-}
-
 function isAllowedHost(request: IncomingMessage, allowedHosts: string[]): boolean {
   const hostHeader = request.headers.host;
   if (hostHeader === undefined) {
@@ -60,7 +48,7 @@ function isAllowedHost(request: IncomingMessage, allowedHosts: string[]): boolea
 
 export function listenOnLoopback(
   server: Server,
-  port = Number(process.env.PORT ?? 3000),
+  port = DEFAULT_CONFIG.port,
 ): Promise<Server> {
   return new Promise((resolve, reject) => {
     const onError = (error: Error) => {

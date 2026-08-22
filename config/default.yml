@@ -1,0 +1,7 @@
+# Coordination MCP 默认配置。
+# 可通过 --profile 指定另一个 YAML 文件覆盖这里的配置。
+port: 3000
+dataDirectory: data
+allowedHosts:
+  - 127.0.0.1
+  - localhost
