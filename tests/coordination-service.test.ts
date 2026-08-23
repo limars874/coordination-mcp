@@ -244,14 +244,19 @@ describe('CoordinationService tickets', () => {
       latestSeq: 1,
       hasMore: false,
     });
-    await expect(
-      restartedService.addUpdate({
-        scope: 'coordination-mcp',
-        type: 'result',
-        body: 'The next complete record gets the next sequence.',
-        created_by: 'local-ai',
-      }),
-    ).resolves.toMatchObject({ seq: 2 });
+    const secondUpdate = await restartedService.addUpdate({
+      scope: 'coordination-mcp',
+      type: 'result',
+      body: 'The next complete record gets the next sequence.',
+      created_by: 'local-ai',
+    });
+    expect(secondUpdate).toMatchObject({ seq: 2 });
+
+    await expect(restartedService.listUpdates('coordination-mcp', { afterSeq: 0 })).resolves.toEqual({
+      updates: [firstUpdate, secondUpdate],
+      latestSeq: 2,
+      hasMore: false,
+    });
   });
 
   it('does not hide malformed complete Update records', async () => {
