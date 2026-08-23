@@ -101,7 +101,8 @@ export class FileStateStore implements StateStore {
         JSON.parse(finalLine);
         separator = '\n';
       } catch {
-        await truncate(filePath, lastNewlineIndex + 1);
+        const validPrefix = existingContent.slice(0, lastNewlineIndex + 1);
+        await truncate(filePath, Buffer.byteLength(validPrefix, 'utf8'));
       }
     }
 

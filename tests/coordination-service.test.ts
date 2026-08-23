@@ -229,7 +229,7 @@ describe('CoordinationService tickets', () => {
     const firstUpdate = await service.addUpdate({
       scope: 'coordination-mcp',
       type: 'result',
-      body: 'The complete record survives.',
+      body: '完整记录仍然保留。🧪',
       created_by: 'local-ai',
     });
     await appendFile(updatesFile(dataDirectory, 'coordination-mcp'), '{"id":"U-torn"');
