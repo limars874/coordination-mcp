@@ -2,6 +2,7 @@
   "name": "coordination-mcp",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "A small shared work-state MCP server.",
   "type": "module",
   "scripts": {
