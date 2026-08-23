@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { Artifact, ArtifactStore } from '../domain/model.js';
-import { readDirectoryIfExists, readJsonFile, writeJsonAtomically } from './file-utils.js';
+import { readDirectoryIfExists, readJsonFileByName, writeJsonAtomically } from './file-utils.js';
 import { artifactsDirectory } from './paths.js';
 
 export class FileArtifactStore implements ArtifactStore {
@@ -21,8 +21,9 @@ export class FileArtifactStore implements ArtifactStore {
         continue;
       }
 
-      const artifact = await readJsonFile<Artifact>(
-        join(this.dataDirectory, 'scopes', scopeEntry.name, 'artifacts', `${id}.json`),
+      const artifact = await readJsonFileByName<Artifact>(
+        join(this.dataDirectory, 'scopes', scopeEntry.name, 'artifacts'),
+        `${id}.json`,
       );
       if (artifact !== undefined) {
         return artifact;

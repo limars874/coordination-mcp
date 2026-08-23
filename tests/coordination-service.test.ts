@@ -1,4 +1,4 @@
-import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { appendFile, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -200,6 +200,70 @@ describe('CoordinationService tickets', () => {
       (await stat(join(ticketsDirectory(dataDirectory, ticket.scope), `${ticket.id}.json`))).mode & 0o777,
     ).toBe(0o600);
     expect((await stat(updatesFile(dataDirectory, update.scope))).mode & 0o777).toBe(0o600);
+  });
+
+  it('does not use caller-controlled IDs as filesystem paths', async () => {
+    await service.createTicket({
+      scope: 'coordination-mcp',
+      title: 'Path safety',
+      created_by: 'user',
+    });
+    await service.createArtifact({
+      scope: 'coordination-mcp',
+      media_type: 'text/plain',
+      content: 'Path safety',
+      created_by: 'user',
+    });
+    await writeFile(join(temporaryDirectory, 'secret-ticket.json'), '{"leaked":true}');
+    await writeFile(join(temporaryDirectory, 'secret-artifact.json'), '{"leaked":true}');
+
+    await expect(service.getTicket('../../../../secret-ticket')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    await expect(service.getArtifact('../../../../secret-artifact')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('recovers from a torn final Update record without reusing its sequence', async () => {
+    const firstUpdate = await service.addUpdate({
+      scope: 'coordination-mcp',
+      type: 'result',
+      body: 'The complete record survives.',
+      created_by: 'local-ai',
+    });
+    await appendFile(updatesFile(dataDirectory, 'coordination-mcp'), '{"id":"U-torn"');
+
+    const restartedService = new CoordinationService({
+      stateStore: new FileStateStore(dataDirectory),
+      artifactStore: new FileArtifactStore(dataDirectory),
+    });
+
+    await expect(restartedService.listUpdates('coordination-mcp', { afterSeq: 0 })).resolves.toEqual({
+      updates: [firstUpdate],
+      latestSeq: 1,
+      hasMore: false,
+    });
+    await expect(
+      restartedService.addUpdate({
+        scope: 'coordination-mcp',
+        type: 'result',
+        body: 'The next complete record gets the next sequence.',
+        created_by: 'local-ai',
+      }),
+    ).resolves.toMatchObject({ seq: 2 });
+  });
+
+  it('does not hide malformed complete Update records', async () => {
+    await service.addUpdate({
+      scope: 'coordination-mcp',
+      type: 'result',
+      body: 'The complete record is valid.',
+      created_by: 'local-ai',
+    });
+    await appendFile(updatesFile(dataDirectory, 'coordination-mcp'), '{"broken":}\n');
+
+    await expect(service.listUpdates('coordination-mcp', { afterSeq: 0 })).rejects.toThrow(SyntaxError);
   });
 
   it('rejects binary artifacts, missing Tickets, and immutable Ticket fields', async () => {

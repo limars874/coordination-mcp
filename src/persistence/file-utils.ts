@@ -29,6 +29,12 @@ export async function readJsonFile<T>(filePath: string): Promise<T | undefined> 
   return content === undefined ? undefined : (JSON.parse(content) as T);
 }
 
+export async function readJsonFileByName<T>(directory: string, fileName: string): Promise<T | undefined> {
+  const entries = await readDirectoryIfExists(directory);
+  const entry = entries.find(candidate => candidate.isFile() && candidate.name === fileName);
+  return entry === undefined ? undefined : readJsonFile<T>(join(directory, entry.name));
+}
+
 export async function writeJsonAtomically(filePath: string, value: unknown): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true, mode: 0o700 });
   const temporaryPath = join(dirname(filePath), `.${basename(filePath)}.${randomUUID()}.tmp`);

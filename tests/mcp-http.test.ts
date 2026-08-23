@@ -86,6 +86,69 @@ describe('Coordination MCP HTTP interface', () => {
     expect(payload.ticket.status).toBe('open');
   });
 
+  it('rejects unknown input fields for every MCP tool', async () => {
+    await sendMcpRequest({
+      id: 4,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-03-26',
+        capabilities: {},
+        clientInfo: { name: 'coordination-mcp-test', version: '0.1.0' },
+      },
+    });
+
+    const cases = [
+      { name: 'list_tickets', arguments: { scope: 'coordination-mcp', unexpected: true } },
+      { name: 'get_ticket', arguments: { id: 'T-missing', unexpected: true } },
+      {
+        name: 'create_ticket',
+        arguments: {
+          scope: 'coordination-mcp',
+          title: 'Strict input',
+          created_by: 'user',
+          unexpected: true,
+        },
+      },
+      {
+        name: 'update_ticket',
+        arguments: { id: 'T-missing', title: 'Strict input', unexpected: true },
+      },
+      { name: 'list_updates', arguments: { scope: 'coordination-mcp', unexpected: true } },
+      {
+        name: 'add_update',
+        arguments: {
+          scope: 'coordination-mcp',
+          type: 'note',
+          body: 'Strict input',
+          created_by: 'user',
+          unexpected: true,
+        },
+      },
+      {
+        name: 'create_artifact',
+        arguments: {
+          scope: 'coordination-mcp',
+          media_type: 'text/plain',
+          content: 'Strict input',
+          created_by: 'user',
+          unexpected: true,
+        },
+      },
+      { name: 'get_artifact', arguments: { id: 'A-missing', unexpected: true } },
+    ];
+
+    for (const [index, toolCase] of cases.entries()) {
+      const response = await sendMcpRequest({
+        id: 5 + index,
+        method: 'tools/call',
+        params: toolCase,
+      });
+
+      expect(response.result.isError).toBe(true);
+      expect(response.result.content[0].text).toContain('unexpected');
+    }
+  });
+
   it('round-trips the core state model through MCP tools', async () => {
     await sendMcpRequest({
       id: 10,

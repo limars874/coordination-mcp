@@ -12,6 +12,7 @@ import type {
 import {
   readDirectoryIfExists,
   readJsonFile,
+  readJsonFileByName,
   readTextFileIfExists,
   writeJsonAtomically,
 } from './file-utils.js';
@@ -32,8 +33,9 @@ export class FileStateStore implements StateStore {
         continue;
       }
 
-      const ticket = await readJsonFile<Ticket>(
-        join(this.dataDirectory, 'scopes', scopeEntry.name, 'tickets', `${id}.json`),
+      const ticket = await readJsonFileByName<Ticket>(
+        join(this.dataDirectory, 'scopes', scopeEntry.name, 'tickets'),
+        `${id}.json`,
       );
       if (ticket !== undefined) {
         return ticket;
@@ -119,10 +121,21 @@ export class FileStateStore implements StateStore {
       return [];
     }
 
-    return content
-      .split('\n')
+    const lines = content.split('\n');
+    const finalLine = content.endsWith('\n') ? undefined : lines.pop();
+    const updates = lines
       .filter(line => line.length > 0)
       .map(line => JSON.parse(line) as Update);
+
+    if (finalLine !== undefined && finalLine.length > 0) {
+      try {
+        updates.push(JSON.parse(finalLine) as Update);
+      } catch {
+        // 最后一行没有换行且 JSON 不完整时，按写入中断的尾部处理。
+      }
+    }
+
+    return updates;
   }
 }
 

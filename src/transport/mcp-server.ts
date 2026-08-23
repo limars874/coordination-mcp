@@ -13,12 +13,14 @@ export function createMcpServer(service: CoordinationService): McpServer {
     'list_tickets',
     {
       description: 'List current Tickets in a Scope.',
-      inputSchema: z.object({
-        scope: z.string().min(1),
-        status: z.string().min(1).optional(),
-        limit: z.number().int().min(1).max(100).optional(),
-        cursor: z.string().optional(),
-      }),
+      inputSchema: z
+        .object({
+          scope: z.string().min(1),
+          status: z.string().min(1).optional(),
+          limit: z.number().int().min(1).max(100).optional(),
+          cursor: z.string().optional(),
+        })
+        .strict(),
     },
     async input =>
       runTool(async () => {
@@ -34,7 +36,7 @@ export function createMcpServer(service: CoordinationService): McpServer {
     'get_ticket',
     {
       description: 'Get one Ticket by its globally unique ID.',
-      inputSchema: z.object({ id: z.string().min(1) }),
+      inputSchema: z.object({ id: z.string().min(1) }).strict(),
     },
     async ({ id }) => runTool(async () => ({ ticket: await service.getTicket(id) })),
   );
@@ -43,14 +45,16 @@ export function createMcpServer(service: CoordinationService): McpServer {
     'create_ticket',
     {
       description: 'Create a mutable current-state Ticket.',
-      inputSchema: z.object({
-        scope: z.string().min(1),
-        title: z.string().min(1),
-        status: z.string().min(1).optional(),
-        created_by: z.string().min(1),
-        artifact_ids: artifactIdsSchema,
-        meta: metadataSchema,
-      }),
+      inputSchema: z
+        .object({
+          scope: z.string().min(1),
+          title: z.string().min(1),
+          status: z.string().min(1).optional(),
+          created_by: z.string().min(1),
+          artifact_ids: artifactIdsSchema,
+          meta: metadataSchema,
+        })
+        .strict(),
     },
     async input => runTool(async () => ({ ticket: await service.createTicket(input) })),
   );
@@ -76,13 +80,15 @@ export function createMcpServer(service: CoordinationService): McpServer {
     'list_updates',
     {
       description: 'List immutable Updates for incremental Scope synchronization.',
-      inputSchema: z.object({
-        scope: z.string().min(1),
-        after_seq: z.number().int().min(0).optional(),
-        ticket_id: z.string().min(1).optional(),
-        type: z.string().min(1).optional(),
-        limit: z.number().int().min(1).max(100).optional(),
-      }),
+      inputSchema: z
+        .object({
+          scope: z.string().min(1),
+          after_seq: z.number().int().min(0).optional(),
+          ticket_id: z.string().min(1).optional(),
+          type: z.string().min(1).optional(),
+          limit: z.number().int().min(1).max(100).optional(),
+        })
+        .strict(),
     },
     async ({ scope, after_seq, ticket_id, type, limit }) =>
       runTool(async () => {
@@ -104,15 +110,17 @@ export function createMcpServer(service: CoordinationService): McpServer {
     'add_update',
     {
       description: 'Append an immutable Update to a Scope timeline.',
-      inputSchema: z.object({
-        scope: z.string().min(1),
-        ticket_id: z.string().min(1).optional(),
-        type: z.string().min(1),
-        body: z.string().min(1),
-        created_by: z.string().min(1),
-        artifact_ids: artifactIdsSchema,
-        meta: metadataSchema,
-      }),
+      inputSchema: z
+        .object({
+          scope: z.string().min(1),
+          ticket_id: z.string().min(1).optional(),
+          type: z.string().min(1),
+          body: z.string().min(1),
+          created_by: z.string().min(1),
+          artifact_ids: artifactIdsSchema,
+          meta: metadataSchema,
+        })
+        .strict(),
     },
     async input => runTool(async () => ({ update: await service.addUpdate(input) })),
   );
@@ -121,13 +129,15 @@ export function createMcpServer(service: CoordinationService): McpServer {
     'create_artifact',
     {
       description: 'Create immutable shared textual content.',
-      inputSchema: z.object({
-        scope: z.string().min(1),
-        media_type: z.string().min(1),
-        content: z.string(),
-        created_by: z.string().min(1),
-        meta: metadataSchema,
-      }),
+      inputSchema: z
+        .object({
+          scope: z.string().min(1),
+          media_type: z.string().min(1),
+          content: z.string(),
+          created_by: z.string().min(1),
+          meta: metadataSchema,
+        })
+        .strict(),
     },
     async input => runTool(async () => ({ artifact: await service.createArtifact(input) })),
   );
@@ -136,7 +146,7 @@ export function createMcpServer(service: CoordinationService): McpServer {
     'get_artifact',
     {
       description: 'Get one immutable Artifact by its globally unique ID.',
-      inputSchema: z.object({ id: z.string().min(1) }),
+      inputSchema: z.object({ id: z.string().min(1) }).strict(),
     },
     async ({ id }) => runTool(async () => ({ artifact: await service.getArtifact(id) })),
   );

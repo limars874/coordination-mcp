@@ -177,7 +177,7 @@ curl -N \
 ```
 
 - Ticket 和 Artifact 使用独立的 pretty-printed JSON 文件。
-- 一个 `Scope` 的 Updates 使用 append-only JSONL 文件。
+- 一个 `Scope` 的 Updates 使用 append-only JSONL 文件；读取时会忽略最后一个未换行且无法解析的损坏尾记录，但不会隐藏已完整换行记录中的 JSON 损坏。
 - 新建目录使用 `0700`，新建数据文件使用 `0600`。
 - V0.1 使用单进程内的 `Scope` mutex；不支持跨进程锁或分布式部署。
 
