@@ -1,6 +1,6 @@
 # Coordination MCP
 
-Coordination MCP 是一个面向多个 AI 参与者的轻量级共享工作状态服务。它通过 MCP 提供持久化的 `Ticket`、不可变 `Update` 和文本型 `Artifact`，让 ChatGPT、local AI 和 coding agent 在同一个 `Scope` 中共享可检索的工作上下文。
+Coordination MCP 是一个面向多个 AI 参与者的轻量级共享工作状态服务。它通过 MCP 提供持久化的 `Ticket`、不可变 `Update` 和文本型 `Artifact`，让 ChatGPT、local AI 和 coding agent 在同一个 `Scope` 中共享、增量同步并恢复工作上下文。
 
 ## V0.1 能做什么
 
@@ -11,6 +11,15 @@ Coordination MCP 是一个面向多个 AI 参与者的轻量级共享工作状�
 - `Ticket` 和 `Artifact` 的引用必须属于同一个 `Scope`。
 
 V0.1 不包含 authentication、workflow engine、queue acknowledgement、relationship graph、wake-up notification 和 binary artifact 支持。
+
+## 推荐使用模式
+
+- `Ticket` 表示一个持续工作项的当前可变状态；它不是事件日志。
+- `Update` 表示工作时间线中已经发生的不可变事件，例如 request、finding、decision 或 result。
+- `Artifact` 表示不可变的长文本内容；长 review、规格或日志应放入 `Artifact`，不要塞进 `Update`，并通过 `artifact_ids` 建立关联。
+- `created_by` 应使用跨运行和跨 agent 稳定的 participant label，例如 `chatgpt`、`pi-local-agent`，不要每次使用随机或变化的名称，以保持时间线归属清晰。该字段用于 provenance，不是 authentication。
+
+一个典型的 review loop 是：local AI 通过 `Update` 请求 review → ChatGPT 将完整 review 保存为 `Artifact`，并通过 `Update` 返回摘要和 `artifact_ids` → local AI 修复代码并追加 result `Update` → ChatGPT 重新 review。
 
 ## 快速开始
 
